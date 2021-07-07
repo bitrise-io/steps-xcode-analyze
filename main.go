@@ -16,6 +16,7 @@ import (
 	cache "github.com/bitrise-io/go-xcode/xcodecache"
 	"github.com/bitrise-io/go-xcode/xcpretty"
 	"github.com/bitrise-steplib/steps-xcode-archive/utils"
+	"github.com/kballard/go-shellquote"
 )
 
 const (
@@ -34,6 +35,7 @@ type Config struct {
 	DisableCodesign           bool   `env:"disable_codesign,opt[yes,no]"`
 	DisableIndexWhileBuilding bool   `env:"disable_index_while_building,opt[yes,no]"`
 	CacheLevel                string `env:"cache_level,opt[none,swift_packages]"`
+	XcodebuildOptions         string `env:"xcodebuild_options"`
 	OutputTool                string `env:"output_tool,opt[xcpretty,xcodebuild]"`
 	OutputDir                 string `env:"output_dir,dir"`
 
@@ -164,6 +166,15 @@ func main() {
 		if swiftPackagesPath, err = cache.SwiftPackagesPath(absProjectPath); err != nil {
 			fail("Failed to get Swift Packages path, error: %s", err)
 		}
+	}
+
+	if conf.XcodebuildOptions != "" {
+		userOptions, err := shellquote.Split(conf.XcodebuildOptions)
+		if err != nil {
+			fail("failed to shell split XcodebuildOptions (%s), error: %s", conf.XcodebuildOptions, err)
+		}
+
+		analyzeCmd.SetCustomOptions(userOptions)
 	}
 
 	rawXcodebuildOut, err := runCommandWithRetry(analyzeCmd, outputTool == "xcpretty", swiftPackagesPath)
